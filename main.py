@@ -1,6 +1,7 @@
 import os
 import re
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import wraps
 from secrets import token_hex
@@ -13,11 +14,37 @@ DB = os.environ.get(
     "DATABASE_PATH",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "registos.db"),
 )
-ORGANIZER_EMAIL = os.environ.get("ORGANIZER_EMAIL", "organizador@example.com").lower()
-# A password nunca é guardada em claro: guardamos apenas o hash.
-ORGANIZER_HASH = generate_password_hash(
-    os.environ.get("ORGANIZER_PASSWORD", "mudar-esta-password")
-)
+# Com DATABASE_URL (Postgres, ex.: Supabase) usa Postgres; sem ela usa SQLite local.
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+USA_POSTGRES = bool(DATABASE_URL)
+if USA_POSTGRES:
+    import psycopg
+    from psycopg.errors import UniqueViolation
+    from psycopg.rows import dict_row
+
+    ERRO_DUPLICADO = UniqueViolation
+else:
+    ERRO_DUPLICADO = sqlite3.IntegrityError
+PH = "%s" if USA_POSTGRES else "?"  # marcador de parâmetros de cada driver
+
+PLACEHOLDERS = {"troca-esta-password", "mudar-esta-password", "troca-por-uma-chave-aleatoria-longa"}
+
+
+def variavel_obrigatoria(nome):
+    """Lê uma variável de ambiente obrigatória; recusa arrancar se faltar ou for um placeholder."""
+    valor = os.environ.get(nome, "").strip()
+    if not valor or valor in PLACEHOLDERS:
+        raise SystemExit(
+            f"Erro de configuração: defina a variável {nome} com um valor real "
+            "(copie .env.example para .env e edite-o; ver README)."
+        )
+    return valor
+
+
+ORGANIZER_EMAIL = variavel_obrigatoria("ORGANIZER_EMAIL").lower()
+# Não existe password por omissão no código. A password nunca é guardada em claro:
+# guardamos apenas o hash.
+ORGANIZER_HASH = generate_password_hash(variavel_obrigatoria("ORGANIZER_PASSWORD"))
 
 EVENTO = {
     "nome": "Workshop de Desenvolvimento Web 2027",
@@ -30,28 +57,50 @@ EVENTO = {
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY") or token_hex(32)
+# Sem SECRET_KEY gera-se uma chave aleatória (as sessões acabam ao reiniciar).
+# O valor de exemplo do .env.example é público, por isso é recusado.
+_chave = os.environ.get("SECRET_KEY", "").strip()
+if _chave in PLACEHOLDERS:
+    raise SystemExit("Erro de configuração: troque o SECRET_KEY de exemplo por uma chave aleatória (ver .env.example).")
+if USA_POSTGRES:
+    # Online o serviço reinicia: sem chave fixa, o organizador perdia a sessão a cada reinício.
+    _chave = variavel_obrigatoria("SECRET_KEY")
+app.secret_key = _chave or token_hex(32)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 
-# --- Base de dados (SQLite) ----------------------------------------------------
+# --- Base de dados (Postgres se existir DATABASE_URL, senão SQLite) --------------
+@contextmanager
 def ligar():
-    ligacao = sqlite3.connect(DB)
-    ligacao.row_factory = sqlite3.Row
-    return ligacao
+    """Abre uma ligação; faz commit no fim (ou rollback se houver erro) e fecha-a."""
+    if USA_POSTGRES:
+        # prepare_threshold=None: compatível com o pooler do Supabase.
+        ligacao = psycopg.connect(DATABASE_URL, row_factory=dict_row, prepare_threshold=None)
+    else:
+        ligacao = sqlite3.connect(DB)
+        ligacao.row_factory = sqlite3.Row
+    try:
+        with ligacao:
+            yield ligacao
+    finally:
+        ligacao.close()
 
 
 def criar_tabela():
-    os.makedirs(os.path.dirname(DB), exist_ok=True)
+    if USA_POSTGRES:
+        coluna_id = "id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY"
+    else:
+        os.makedirs(os.path.dirname(DB), exist_ok=True)
+        coluna_id = "id INTEGER PRIMARY KEY AUTOINCREMENT"
     with ligar() as db:
         db.execute(
-            """CREATE TABLE IF NOT EXISTS registos (
-                   id INTEGER PRIMARY KEY AUTOINCREMENT,
-                   nome TEXT NOT NULL,
-                   email TEXT NOT NULL UNIQUE,
-                   data_registo TEXT NOT NULL
-               )"""
+            f"""CREATE TABLE IF NOT EXISTS registos (
+                    {coluna_id},
+                    nome TEXT NOT NULL,
+                    email TEXT NOT NULL UNIQUE,
+                    data_registo TEXT NOT NULL
+                )"""
         )
 
 
@@ -105,15 +154,15 @@ def registo():
 
     try:
         with ligar() as db:
-            cur = db.execute(
-                "INSERT INTO registos (nome, email, data_registo) VALUES (?, ?, ?)",
+            novo_id = db.execute(
+                f"INSERT INTO registos (nome, email, data_registo) VALUES ({PH}, {PH}, {PH}) RETURNING id",
                 (nome, email, datetime.now(timezone.utc).isoformat()),
-            )
-    except sqlite3.IntegrityError:  # email repetido (UNIQUE)
+            ).fetchone()["id"]
+    except ERRO_DUPLICADO:  # email repetido (UNIQUE)
         erros["email"] = "Este email já está registado neste evento."
         return render_template("registo.html", erros=erros, valores={"nome": nome, "email": email}), 409
 
-    session["ultimo_registo"] = cur.lastrowid
+    session["ultimo_registo"] = novo_id
     return redirect(url_for("confirmacao"))
 
 
@@ -123,10 +172,21 @@ def confirmacao():
     if not id_registo:
         return redirect(url_for("inicio"))
     with ligar() as db:
-        reg = db.execute("SELECT * FROM registos WHERE id = ?", (id_registo,)).fetchone()
+        reg = db.execute(f"SELECT * FROM registos WHERE id = {PH}", (id_registo,)).fetchone()
     if reg is None:
         return redirect(url_for("inicio"))
     return render_template("confirmacao.html", reg=reg)
+
+
+@app.get("/saude")
+def saude():
+    """Verificação de saúde (Render / UptimeRobot): confirma que a base de dados responde."""
+    try:
+        with ligar() as db:
+            db.execute("SELECT 1").fetchone()
+    except Exception:
+        return "erro", 503
+    return "ok", 200
 
 
 # --- Organizador -----------------------------------------------------------------
