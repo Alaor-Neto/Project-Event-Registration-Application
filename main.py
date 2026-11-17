@@ -2,7 +2,7 @@ import os
 import re
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from secrets import token_hex
 from zoneinfo import ZoneInfo
@@ -97,6 +97,8 @@ if USA_POSTGRES:
 app.secret_key = _chave or token_hex(32)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# O login do organizador expira após 30 minutos sem atividade (renova a cada pedido).
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
 
 
 # --- Base de dados (Postgres se existir DATABASE_URL, senão SQLite) --------------
@@ -255,6 +257,7 @@ def login():
         password = request.form.get("password", "")
         if email == ORGANIZER_EMAIL and check_password_hash(ORGANIZER_HASH, password):
             session.clear()
+            session.permanent = True  # aplica o prazo de 30 minutos
             session["organizador"] = True
             return redirect(url_for("organizador"))
         return render_template("login.html", erro="Email ou password incorretos.", email=email), 401

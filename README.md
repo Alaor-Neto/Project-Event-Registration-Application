@@ -19,7 +19,7 @@ Aplicação simples para registo num único evento (*Workshop de Desenvolvimento
 - `requirements.txt` – dependências Python
 - `.env.example` – exemplo de configuração (com *placeholders*)
 - `Dockerfile` – imagem da aplicação (python:3.12 + gunicorn)
-- `tests.py` – testes dos 7 casos obrigatórios + 6 extras (`python tests.py`)
+- `tests.py` – testes dos 7 casos obrigatórios + 7 extras (`python tests.py`)
 
 ## Configuração
 
@@ -53,6 +53,7 @@ Existe **uma conta de organizador**, definida pelo `.env` (não há registo de n
 
 Para a usar, ponha estes valores em `ORGANIZER_EMAIL` e `ORGANIZER_PASSWORD` no `.env`, arranque a aplicação (abaixo) e inicie sessão em `/organizador/login`.
 Se mudar a password no `.env`, é preciso reiniciar a aplicação (o hash é calculado no arranque).
+A sessão do organizador expira após 30 minutos sem atividade (é preciso voltar a iniciar sessão).
 
 ## Executar com Docker
 
@@ -101,7 +102,7 @@ A base de dados fica em `data/registos.db` (pasta criada automaticamente, ignora
 
 ## Testes
 
-Os 7 testes obrigatórios (registo válido, campos inválidos, email repetido, mesmo nome com email diferente, organizador com tabela e total, acesso negado sem login, persistência), mais seis testes extra (a aplicação não arranca sem password; `/saude` responde; validação do `DATABASE_URL` do Supabase; hora de Lisboa):
+Os 7 testes obrigatórios (registo válido, campos inválidos, email repetido, mesmo nome com email diferente, organizador com tabela e total, acesso negado sem login, persistência), mais sete testes extra (a aplicação não arranca sem password; `/saude` responde; validação do `DATABASE_URL` do Supabase; hora de Lisboa; expiração da sessão do organizador):
 
 ```bash
 pip install -r requirements.txt

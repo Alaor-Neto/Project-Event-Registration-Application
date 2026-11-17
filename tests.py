@@ -82,6 +82,16 @@ class Testes(unittest.TestCase):
         self.assertEqual(main.datahora("2027-01-15T12:00:00+00:00"), "15/01/2027 12:00")
         self.assertEqual(main.datahora("2027-07-15T12:00:00+00:00"), "15/07/2027 13:00")
 
+    def test_14_extra_sessao_do_organizador_expira(self):
+        """Extra: o login do organizador é uma sessão com prazo (30 min de inatividade)."""
+        self.c.post("/organizador/login", data={"email": "org@example.com", "password": "segredo123"})
+        with self.c.session_transaction() as s:
+            self.assertTrue(s.permanent)
+        self.assertEqual(main.app.permanent_session_lifetime.total_seconds(), 30 * 60)
+        # Simula uma sessão expirada: o cookie deixa de ser aceite e o acesso é negado.
+        self.c.delete_cookie("session")
+        self.assertEqual(self.c.get("/organizador").status_code, 302)
+
 
 if __name__ == "__main__":
     unittest.main()
