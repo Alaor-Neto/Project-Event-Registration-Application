@@ -1,5 +1,5 @@
 """Testes dos 7 testes obrigatórios. Executar: python tests.py"""
-import importlib, os, sqlite3, tempfile, unittest
+import importlib, os, sqlite3, subprocess, sys, tempfile, unittest
 
 os.environ["DATABASE_PATH"] = os.path.join(tempfile.mkdtemp(), "teste.db")
 os.environ["ORGANIZER_EMAIL"] = "org@example.com"
@@ -44,6 +44,13 @@ class Testes(unittest.TestCase):
         importlib.reload(main)  # simula reiniciar a aplicação
         linhas = sqlite3.connect(main.DB).execute("SELECT 1 FROM registos WHERE email='p@x.com'").fetchall()
         self.assertEqual(len(linhas), 1)
+
+    def test_8_extra_sem_password_nao_arranca(self):
+        """Extra: sem ORGANIZER_PASSWORD a aplicação recusa arrancar (não há password por omissão)."""
+        env = {k: v for k, v in os.environ.items() if k != "ORGANIZER_PASSWORD"}
+        pasta = os.path.dirname(os.path.abspath(main.__file__))
+        r = subprocess.run([sys.executable, "-c", "import main"], cwd=pasta, env=env, capture_output=True)
+        self.assertNotEqual(r.returncode, 0)
 
 
 if __name__ == "__main__":

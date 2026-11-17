@@ -13,11 +13,24 @@ DB = os.environ.get(
     "DATABASE_PATH",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "registos.db"),
 )
-ORGANIZER_EMAIL = os.environ.get("ORGANIZER_EMAIL", "organizador@example.com").lower()
-# A password nunca é guardada em claro: guardamos apenas o hash.
-ORGANIZER_HASH = generate_password_hash(
-    os.environ.get("ORGANIZER_PASSWORD", "mudar-esta-password")
-)
+PLACEHOLDERS = {"troca-esta-password", "mudar-esta-password", "troca-por-uma-chave-aleatoria-longa"}
+
+
+def variavel_obrigatoria(nome):
+    """Lê uma variável de ambiente obrigatória; recusa arrancar se faltar ou for um placeholder."""
+    valor = os.environ.get(nome, "").strip()
+    if not valor or valor in PLACEHOLDERS:
+        raise SystemExit(
+            f"Erro de configuração: defina a variável {nome} com um valor real "
+            "(copie .env.example para .env e edite-o; ver README)."
+        )
+    return valor
+
+
+ORGANIZER_EMAIL = variavel_obrigatoria("ORGANIZER_EMAIL").lower()
+# Não existe password por omissão no código. A password nunca é guardada em claro:
+# guardamos apenas o hash.
+ORGANIZER_HASH = generate_password_hash(variavel_obrigatoria("ORGANIZER_PASSWORD"))
 
 EVENTO = {
     "nome": "Workshop de Desenvolvimento Web 2027",
@@ -30,7 +43,12 @@ EVENTO = {
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY") or token_hex(32)
+# Sem SECRET_KEY gera-se uma chave aleatória (as sessões acabam ao reiniciar).
+# O valor de exemplo do .env.example é público, por isso é recusado.
+_chave = os.environ.get("SECRET_KEY", "").strip()
+if _chave in PLACEHOLDERS:
+    raise SystemExit("Erro de configuração: troque o SECRET_KEY de exemplo por uma chave aleatória (ver .env.example).")
+app.secret_key = _chave or token_hex(32)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
