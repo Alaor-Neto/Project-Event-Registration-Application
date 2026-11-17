@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import wraps
 from secrets import token_hex
+from zoneinfo import ZoneInfo
 
 from flask import Flask, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -17,6 +18,34 @@ DB = os.environ.get(
 # Com DATABASE_URL (Postgres, ex.: Supabase) usa Postgres; sem ela usa SQLite local.
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 USA_POSTGRES = bool(DATABASE_URL)
+
+
+def validar_database_url(url):
+    """Recusa URLs de Postgres com erros comuns, com uma mensagem a dizer como corrigir."""
+    if not url.startswith(("postgresql://", "postgres://")):
+        raise SystemExit("Erro de configuração: DATABASE_URL tem de começar por postgresql://")
+    credenciais, _, destino = url.split("://", 1)[1].rpartition("@")
+    utilizador, _, password = credenciais.partition(":")
+    host = re.split(r"[:/?#]", destino, maxsplit=1)[0]
+    if host.startswith("db.") and host.endswith(".supabase.co"):
+        raise SystemExit(
+            "Erro de configuração: DATABASE_URL é a ligação direta do Supabase (só IPv6; o Render não a "
+            "alcança). No Supabase use Connect > Session pooler (host ...pooler.supabase.com)."
+        )
+    if "[" in password or "]" in password or "[" in utilizador:
+        raise SystemExit(
+            "Erro de configuração: DATABASE_URL contém parênteses retos [ ]. Em [YOUR-PASSWORD] os "
+            "parênteses são só um marcador: substitua-o por inteiro pela password, sem [ ]."
+        )
+    if host.endswith(".pooler.supabase.com") and "." not in utilizador:
+        raise SystemExit(
+            "Erro de configuração: no Session pooler o utilizador tem de ser postgres.<ref-do-projeto> "
+            "(não apenas 'postgres'). Copie o URL de Connect > Session pooler."
+        )
+
+
+if USA_POSTGRES:
+    validar_database_url(DATABASE_URL)
 if USA_POSTGRES:
     import psycopg
     from psycopg.errors import UniqueViolation
@@ -76,7 +105,9 @@ def ligar():
     """Abre uma ligação; faz commit no fim (ou rollback se houver erro) e fecha-a."""
     if USA_POSTGRES:
         # prepare_threshold=None: compatível com o pooler do Supabase.
-        ligacao = psycopg.connect(DATABASE_URL, row_factory=dict_row, prepare_threshold=None)
+        ligacao = psycopg.connect(
+            DATABASE_URL, row_factory=dict_row, prepare_threshold=None, connect_timeout=10
+        )
     else:
         ligacao = sqlite3.connect(DB)
         ligacao.row_factory = sqlite3.Row
@@ -93,15 +124,38 @@ def criar_tabela():
     else:
         os.makedirs(os.path.dirname(DB), exist_ok=True)
         coluna_id = "id INTEGER PRIMARY KEY AUTOINCREMENT"
-    with ligar() as db:
-        db.execute(
-            f"""CREATE TABLE IF NOT EXISTS registos (
-                    {coluna_id},
-                    nome TEXT NOT NULL,
-                    email TEXT NOT NULL UNIQUE,
-                    data_registo TEXT NOT NULL
-                )"""
-        )
+    try:
+        with ligar() as db:
+            db.execute(
+                f"""CREATE TABLE IF NOT EXISTS registos (
+                        {coluna_id},
+                        nome TEXT NOT NULL,
+                        email TEXT NOT NULL UNIQUE,
+                        data_registo TEXT NOT NULL
+                    )"""
+            )
+    except Exception as erro:
+        if USA_POSTGRES and isinstance(erro, psycopg.OperationalError):
+            raise SystemExit(explicar_erro_ligacao(erro)) from None
+        raise
+
+
+def explicar_erro_ligacao(erro):
+    """Traduz o erro do Postgres numa dica prática (nunca mostra o DATABASE_URL nem a password)."""
+    texto = str(erro)
+    primeira = texto.strip().splitlines()[0] if texto.strip() else repr(erro)
+    if "password authentication failed" in texto:
+        dica = ("A password do DATABASE_URL está errada. Faça Reset database password no Supabase "
+                "(Project Settings > Database), use uma só com letras e números e cole-a no URL sem [ ].")
+    elif "Network is unreachable" in texto:
+        dica = "O Render não alcança este host (IPv6). Use a Session pooler do Supabase, não a ligação direta."
+    elif "Tenant or user not found" in texto:
+        dica = "Utilizador ou projeto errado: no pooler o utilizador é postgres.<ref-do-projeto>."
+    elif "timeout" in texto.lower():
+        dica = "A ligação excedeu o tempo limite: confirme o host/porta e que o projeto Supabase não está pausado."
+    else:
+        dica = "Confirme o DATABASE_URL no Render (Environment) e que o projeto Supabase está ativo."
+    return f"Erro ao ligar à base de dados: {primeira}\n{dica}"
 
 
 criar_tabela()
@@ -112,9 +166,13 @@ def dados_evento():
     return {"evento": EVENTO}
 
 
+FUSO = ZoneInfo(os.environ.get("TIMEZONE", "Europe/Lisbon"))
+
+
 @app.template_filter("datahora")
 def datahora(valor):
-    return datetime.fromisoformat(valor).astimezone().strftime("%d/%m/%Y %H:%M")
+    # O servidor (Render) corre em UTC: mostramos sempre a hora de Lisboa.
+    return datetime.fromisoformat(valor).astimezone(FUSO).strftime("%d/%m/%Y %H:%M")
 
 
 def so_organizador(funcao):

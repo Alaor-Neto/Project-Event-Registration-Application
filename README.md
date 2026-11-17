@@ -6,10 +6,10 @@ Aplicação simples para registo num único evento (*Workshop de Desenvolvimento
 
 | Nome | Número de estudante |
 |------|---------------------|
-| [Alaor Neto] | [30014580] |
-| [Sérgio Jorge] | [30014515] |
+| Alaor Neto | 30014580 |
+| Sérgio Jorge | 30014515 |
 
-- **Aplicação online:** `[https://project-event-registration-application.onrender.com]` (ver [Publicação online](#publicação-online-render--supabase))
+- **Aplicação online:** <https://project-event-registration-application.onrender.com> (ver [Publicação online](#publicação-online-render--supabase))
 - **Relatório final (PDF):** [docs/relatorio.pdf](docs/relatorio.pdf)
 
 ## Estrutura
@@ -19,7 +19,7 @@ Aplicação simples para registo num único evento (*Workshop de Desenvolvimento
 - `requirements.txt` – dependências Python
 - `.env.example` – exemplo de configuração (com *placeholders*)
 - `Dockerfile` – imagem da aplicação (python:3.12 + gunicorn)
-- `tests.py` – testes dos 7 casos obrigatórios + 2 extras (`python tests.py`)
+- `tests.py` – testes dos 7 casos obrigatórios + 6 extras (`python tests.py`)
 
 ## Configuração
 
@@ -101,20 +101,20 @@ A base de dados fica em `data/registos.db` (pasta criada automaticamente, ignora
 
 ## Testes
 
-Os 7 testes obrigatórios (registo válido, campos inválidos, email repetido, mesmo nome com email diferente, organizador com tabela e total, acesso negado sem login, persistência), mais dois testes extra (a aplicação não arranca sem password configurada; a rota `/saude` responde):
+Os 7 testes obrigatórios (registo válido, campos inválidos, email repetido, mesmo nome com email diferente, organizador com tabela e total, acesso negado sem login, persistência), mais seis testes extra (a aplicação não arranca sem password; `/saude` responde; validação do `DATABASE_URL` do Supabase; hora de Lisboa):
 
 ```bash
 pip install -r requirements.txt
 python tests.py
 ```
 
-Os testes usam uma base de dados SQLite temporária e não afetam os dados reais.
+Os testes usam uma base de dados SQLite temporária e ignoram o `DATABASE_URL`, por isso nunca afetam os dados reais.
 
 ## Publicação online (Render + Supabase)
 
 Arquitetura: **browser → Render (Flask/gunicorn, Docker) → Supabase (Postgres)**. A base de dados é externa porque o sistema de ficheiros do Render gratuito é efémero (um SQLite local perder-se-ia a cada reinício).
 
-1. **Supabase:** criar um projeto (região na Europa) e guardar a password da base de dados. Em *Connect*, copiar a ligação **Session pooler** (formato `postgresql://...`). Se a password tiver caracteres especiais, têm de ir codificados no URL. A tabela é criada automaticamente no primeiro arranque.
+1. **Supabase:** criar um projeto (região na Europa) e guardar a password da base de dados. Em *Connect*, copiar a ligação **Session pooler** (host `...pooler.supabase.com`, utilizador `postgres.<ref-do-projeto>`); **não** usar *Direct connection* (só IPv6, o Render não a alcança). Substituir `[YOUR-PASSWORD]` pela password **sem os parênteses**; de preferência uma password só com letras e números (se tiver caracteres especiais, têm de ir codificados no URL). A tabela é criada automaticamente no primeiro arranque.
 2. **Render:** *New → Web Service*, ligar ao repositório do GitHub (deteta o `Dockerfile`), instância **Free**, e em *Environment* definir `ORGANIZER_EMAIL`, `ORGANIZER_PASSWORD` (forte), `SECRET_KEY` e `DATABASE_URL`. Em *Health Check Path* indicar `/saude`. Cada `git push` faz novo deploy.
 3. **UptimeRobot (opcional):** monitor HTTP em `https://<serviço>.onrender.com/saude` a cada 5 minutos, para o serviço gratuito não adormecer (sem tráfego durante 15 minutos suspende e demora cerca de 1 minuto a acordar).
 
@@ -123,3 +123,14 @@ Notas: nunca colocar `DATABASE_URL` nem passwords no GitHub; usar só dados fict
 ### Verificar a persistência online
 
 No Render: *Manual Deploy → Restart service* (ou *Suspend* e *Resume*). Depois de arrancar, os registos continuam visíveis em `/organizador`.
+
+## Problemas comuns (deploy)
+
+| Erro no log do Render | Causa e solução |
+|-----------------------|-----------------|
+| `Network is unreachable` (endereço IPv6) | `DATABASE_URL` é a *Direct connection*. Usar a **Session pooler**. |
+| `password authentication failed` | Password errada ou com `[ ]` / caracteres especiais. *Reset database password* no Supabase (só letras e números) e atualizar o `DATABASE_URL` no Render. |
+| `Tenant or user not found` | No pooler o utilizador é `postgres.<ref-do-projeto>`, não `postgres`. |
+| `Erro de configuração: defina a variável ...` | Falta `ORGANIZER_EMAIL`, `ORGANIZER_PASSWORD` ou `SECRET_KEY` em *Environment*. |
+
+Depois de alterar variáveis no Render, o serviço volta a fazer deploy sozinho; se não, *Manual Deploy → Deploy latest commit*.

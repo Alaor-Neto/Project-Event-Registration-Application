@@ -1,6 +1,8 @@
 """Testes dos 7 testes obrigatórios. Executar: python tests.py"""
 import importlib, os, sqlite3, subprocess, sys, tempfile, unittest
 
+# Os testes nunca devem tocar na base de dados online, mesmo que DATABASE_URL esteja definido.
+os.environ.pop("DATABASE_URL", None)
 os.environ["DATABASE_PATH"] = os.path.join(tempfile.mkdtemp(), "teste.db")
 os.environ["ORGANIZER_EMAIL"] = "org@example.com"
 os.environ["ORGANIZER_PASSWORD"] = "segredo123"
@@ -57,6 +59,28 @@ class Testes(unittest.TestCase):
         r = self.c.get("/saude")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data, b"ok")
+
+    def test_10_extra_ligacao_direta_supabase_recusada(self):
+        """Extra: a ligação direta do Supabase (só IPv6) é recusada com uma dica."""
+        with self.assertRaises(SystemExit) as e:
+            main.validar_database_url("postgresql://postgres:abc@db.xyz.supabase.co:5432/postgres")
+        self.assertIn("Session pooler", str(e.exception))
+
+    def test_11_extra_parenteses_na_password_recusados(self):
+        """Extra: [YOUR-PASSWORD] colado com os parênteses é detetado."""
+        with self.assertRaises(SystemExit):
+            main.validar_database_url("postgresql://postgres.ref:[abc]@aws-1-eu-west-1.pooler.supabase.com:5432/postgres")
+
+    def test_12_extra_pooler_valido_e_utilizador_sem_ref(self):
+        """Extra: URL do pooler correto passa; utilizador 'postgres' simples no pooler é recusado."""
+        main.validar_database_url("postgresql://postgres.ref:abc123@aws-1-eu-west-1.pooler.supabase.com:5432/postgres")
+        with self.assertRaises(SystemExit):
+            main.validar_database_url("postgresql://postgres:abc123@aws-1-eu-west-1.pooler.supabase.com:5432/postgres")
+
+    def test_13_extra_hora_de_lisboa(self):
+        """Extra: as datas aparecem na hora de Lisboa (inverno UTC+0, verão UTC+1)."""
+        self.assertEqual(main.datahora("2027-01-15T12:00:00+00:00"), "15/01/2027 12:00")
+        self.assertEqual(main.datahora("2027-07-15T12:00:00+00:00"), "15/07/2027 13:00")
 
 
 if __name__ == "__main__":
