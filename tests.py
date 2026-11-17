@@ -52,12 +52,15 @@ class Testes(unittest.TestCase):
         r = subprocess.run([sys.executable, "-c", "import main"], cwd=pasta, env=env, capture_output=True)
         self.assertNotEqual(r.returncode, 0)
 
+<<<<<<< HEAD
     def test_9_extra_saude(self):
         """Extra: /saude responde 200 quando a base de dados está acessível (usado pelo UptimeRobot)."""
         r = self.c.get("/saude")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.data, b"ok")
 
+=======
+>>>>>>> 1638a011b0d4cb94aff03f680a9622fa436b368d
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,11 @@
 FROM python:3.12-slim
 
+<<<<<<< HEAD
 WORKDIR /app
+=======
+COPY requirements.txt /requirements.txt
+RUN pip install --no-cache-dir -r /requirements.txt
+>>>>>>> 1638a011b0d4cb94aff03f680a9622fa436b368d
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

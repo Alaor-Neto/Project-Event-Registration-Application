@@ -14,6 +14,7 @@ DB = os.environ.get(
     "DATABASE_PATH",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "registos.db"),
 )
+<<<<<<< HEAD
 # Com DATABASE_URL (Postgres, ex.: Supabase) usa Postgres; sem ela usa SQLite local.
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 USA_POSTGRES = bool(DATABASE_URL)
@@ -27,6 +28,8 @@ else:
     ERRO_DUPLICADO = sqlite3.IntegrityError
 PH = "%s" if USA_POSTGRES else "?"  # marcador de parâmetros de cada driver
 
+=======
+>>>>>>> 1638a011b0d4cb94aff03f680a9622fa436b368d
 PLACEHOLDERS = {"troca-esta-password", "mudar-esta-password", "troca-por-uma-chave-aleatoria-longa"}
 
 
@@ -62,9 +65,12 @@ app = Flask(__name__)
 _chave = os.environ.get("SECRET_KEY", "").strip()
 if _chave in PLACEHOLDERS:
     raise SystemExit("Erro de configuração: troque o SECRET_KEY de exemplo por uma chave aleatória (ver .env.example).")
+<<<<<<< HEAD
 if USA_POSTGRES:
     # Online o serviço reinicia: sem chave fixa, o organizador perdia a sessão a cada reinício.
     _chave = variavel_obrigatoria("SECRET_KEY")
+=======
+>>>>>>> 1638a011b0d4cb94aff03f680a9622fa436b368d
 app.secret_key = _chave or token_hex(32)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
