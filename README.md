@@ -11,6 +11,7 @@ Aplicação simples para registo num único evento (*Workshop de Desenvolvimento
 
 - **Aplicação online:** <https://project-event-registration-application.onrender.com> (ver [Publicação online](#publicação-online-render--supabase))
 - **Relatório final (PDF):** [docs/relatorio.pdf](docs/relatorio.pdf)
+- **Versão submetida:** tag `v1.0` (código final no commit `a8547fc`)
 
 ## Estrutura
 
