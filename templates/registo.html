@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block titulo %}Registo – {{ evento.nome }}{% endblock %}
+{% block conteudo %}
+<div class="mb-5">
+  <h2 class="h3">Registo</h2>
+  <h3 class="fs-6 fw-normal text-secondary m-0">{{ evento.nome }}</h3>
+</div>
+<form action="{{ url_for('registo') }}" method="post" novalidate id="form">
+  <div class="row gy-3 overflow-hidden">
+    <div class="col-12">
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control {{ 'is-invalid' if erros.nome }}" name="nome" id="nome"
+               placeholder="Nome" value="{{ valores.nome or '' }}" maxlength="100" required>
+        <label for="nome" class="form-label">Nome</label>
+        <div class="invalid-feedback" id="erro-nome">{{ erros.nome }}</div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="form-floating mb-3">
+        <input type="email" class="form-control {{ 'is-invalid' if erros.email }}" name="email" id="email"
+               placeholder="nome@exemplo.com" value="{{ valores.email or '' }}" maxlength="254" required>
+        <label for="email" class="form-label">Email</label>
+        <div class="invalid-feedback" id="erro-email">{{ erros.email }}</div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="d-grid">
+        <button class="btn bsb-btn-2xl btn-primary" type="submit">Confirmar registo</button>
+      </div>
+    </div>
+  </div>
+</form>
+<hr class="mt-5 mb-4 border-secondary-subtle">
+<p class="m-0 text-secondary text-center"><a href="{{ url_for('inicio') }}" class="link-primary text-decoration-none">← Voltar ao evento</a></p>
+<script>
+  // Validação no navegador (o servidor volta a validar sempre).
+  var form = document.getElementById('form');
+  var emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  function erro(campo, msg) {
+    document.getElementById('erro-' + campo).textContent = msg;
+    document.getElementById(campo).classList.toggle('is-invalid', msg !== '');
+  }
+  form.addEventListener('submit', function (e) {
+    var nome = form.nome.value.trim();
+    var email = form.email.value.trim();
+    var e1 = nome ? '' : 'O nome é obrigatório.';
+    var e2 = !email ? 'O email é obrigatório.' : (emailRe.test(email) ? '' : 'Introduza um email válido (ex.: nome@exemplo.com).');
+    erro('nome', e1); erro('email', e2);
+    if (e1 || e2) e.preventDefault();
+  });
+</script>
+{% endblock %}
