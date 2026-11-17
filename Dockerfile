@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py .
 COPY templates templates
+COPY static static
 
 # Só usado quando NÃO há DATABASE_URL (SQLite local, com volume em /data).
 ENV DATABASE_PATH=/data/registos.db
