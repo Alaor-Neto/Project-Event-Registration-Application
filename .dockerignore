@@ -1,7 +1,6 @@
+node_modules/
 data/
-__pycache__/
-.venv/
 .env
 .git/
+tests/
 *.zip
-tests.py

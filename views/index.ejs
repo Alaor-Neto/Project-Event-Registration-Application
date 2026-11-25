@@ -1,0 +1,16 @@
+<%- include('partials/topo') %>
+<div class="mb-4">
+  <h2 class="h3"><%= evento.nome %></h2>
+  <h3 class="fs-6 fw-normal text-secondary m-0">Informação do evento</h3>
+</div>
+<p><%= evento.descricao %></p>
+<ul class="list-unstyled mb-4">
+  <li class="mb-2"><strong>Data:</strong> <%= evento.data %></li>
+  <li><strong>Local:</strong> <%= evento.local %></li>
+</ul>
+<div class="d-grid">
+  <a href="/registo" class="btn bsb-btn-2xl btn-primary">Registar-me</a>
+</div>
+<hr class="mt-5 mb-4 border-secondary-subtle">
+<p class="m-0 text-secondary text-center">És organizador? <a href="/organizador/login" class="link-primary text-decoration-none">Entrar</a></p>
+<%- include('partials/fundo') %>

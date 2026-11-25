@@ -1,0 +1,9 @@
+<%- include('partials/topo', { titulo: 'Erro ' + codigo }) %>
+<div class="text-center">
+  <h2 class="h3"><%= codigo %></h2>
+  <p class="text-secondary"><%= mensagem %></p>
+  <div class="d-grid mt-4">
+    <a href="/" class="btn bsb-btn-2xl btn-primary">Voltar ao evento</a>
+  </div>
+</div>
+<%- include('partials/fundo') %>

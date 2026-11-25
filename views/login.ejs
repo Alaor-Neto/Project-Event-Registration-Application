@@ -1,0 +1,48 @@
+<%- include('partials/topo', { titulo: 'Login do organizador' }) %>
+<div class="mb-5">
+  <h2 class="h3">Área do organizador</h2>
+  <h3 class="fs-6 fw-normal text-secondary m-0">Inicia sessão para ver os registos</h3>
+</div>
+<% if (erro) { %><div class="alert alert-danger" role="alert"><%= erro %></div><% } %>
+<form action="/organizador/login" method="post">
+  <div class="row gy-3 overflow-hidden">
+    <div class="col-12">
+      <div class="form-floating mb-3">
+        <input type="email" class="form-control" name="email" id="email" placeholder="nome@exemplo.com"
+               value="<%= email %>" autocomplete="username" required>
+        <label for="email" class="form-label">Email</label>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="input-group mb-3">
+        <div class="form-floating">
+          <input type="password" class="form-control" name="password" id="password" placeholder="Password"
+                 autocomplete="current-password" required>
+          <label for="password" class="form-label">Password</label>
+        </div>
+        <%# O botão só aparece se o JavaScript estiver ativo (ver public/js/login.js). %>
+        <button class="btn btn-outline-secondary" type="button" id="alternar-password" hidden
+                aria-controls="password" aria-pressed="false" aria-label="Mostrar password" title="Mostrar password">
+          <svg id="icone-mostrar" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <svg id="icone-ocultar" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="d-grid">
+        <button class="btn bsb-btn-2xl btn-primary" type="submit">Entrar</button>
+      </div>
+    </div>
+  </div>
+</form>
+<hr class="mt-5 mb-4 border-secondary-subtle">
+<p class="m-0 text-secondary text-center"><a href="/" class="link-primary text-decoration-none">← Voltar ao evento</a></p>
+<%- include('partials/fundo', { script: '/js/login.js' }) %>

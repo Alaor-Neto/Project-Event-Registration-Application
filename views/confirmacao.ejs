@@ -1,0 +1,15 @@
+<%- include('partials/topo', { titulo: 'Registo confirmado' }) %>
+<div class="text-center">
+  <h2 class="h3 text-success">Registo confirmado!</h2>
+  <p class="text-secondary">Obrigado, <strong><%= reg.nome %></strong>. O teu registo foi guardado.</p>
+  <ul class="list-unstyled text-start mt-4">
+    <li class="mb-2"><strong>Número de registo:</strong> #<%= reg.id %></li>
+    <li class="mb-2"><strong>Email:</strong> <%= reg.email %></li>
+    <li class="mb-2"><strong>Data do registo:</strong> <%= datahora(reg.data_registo) %></li>
+    <li><strong>Evento:</strong> <%= evento.nome %> — <%= evento.data %></li>
+  </ul>
+  <div class="d-grid mt-4">
+    <a href="/" class="btn bsb-btn-2xl btn-primary">Voltar ao evento</a>
+  </div>
+</div>
+<%- include('partials/fundo') %>

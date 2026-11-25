@@ -1,0 +1,33 @@
+<%- include('partials/topo', { titulo: 'Registo – ' + evento.nome }) %>
+<div class="mb-5">
+  <h2 class="h3">Registo</h2>
+  <h3 class="fs-6 fw-normal text-secondary m-0"><%= evento.nome %></h3>
+</div>
+<form action="/registo" method="post" novalidate id="form">
+  <div class="row gy-3 overflow-hidden">
+    <div class="col-12">
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control <%= erros.nome ? 'is-invalid' : '' %>" name="nome" id="nome"
+               placeholder="Nome" value="<%= valores.nome || '' %>" maxlength="100" required>
+        <label for="nome" class="form-label">Nome</label>
+        <div class="invalid-feedback" id="erro-nome"><%= erros.nome || '' %></div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="form-floating mb-3">
+        <input type="email" class="form-control <%= erros.email ? 'is-invalid' : '' %>" name="email" id="email"
+               placeholder="nome@exemplo.com" value="<%= valores.email || '' %>" maxlength="254" required>
+        <label for="email" class="form-label">Email</label>
+        <div class="invalid-feedback" id="erro-email"><%= erros.email || '' %></div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="d-grid">
+        <button class="btn bsb-btn-2xl btn-primary" type="submit">Confirmar registo</button>
+      </div>
+    </div>
+  </div>
+</form>
+<hr class="mt-5 mb-4 border-secondary-subtle">
+<p class="m-0 text-secondary text-center"><a href="/" class="link-primary text-decoration-none">← Voltar ao evento</a></p>
+<%- include('partials/fundo', { script: '/js/registo.js' }) %>
