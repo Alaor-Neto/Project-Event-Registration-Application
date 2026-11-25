@@ -64,6 +64,11 @@ test('os erros de ligação ao Postgres dão uma dica e nunca mostram o URL', ()
   const e2 = Object.assign(new Error('connect ENETUNREACH 2600:1f18::1:5432'), { code: 'ENETUNREACH' });
   assert.match(explicarErroLigacao(e2), /Session pooler/);
   assert.match(explicarErroLigacao(new Error('Tenant or user not found')), /postgres\.<ref-do-projeto>/);
+  // Mensagem atual do pooler do Supabase (tem ENOTFOUND, mas não é um host inexistente).
+  const pooler = explicarErroLigacao(new Error('(ENOTFOUND) tenant/user postgres.abcdefghijklmnop not found'));
+  assert.match(pooler, /Connect > Session pooler/);
+  assert.doesNotMatch(pooler, /não existe/);
+  assert.match(explicarErroLigacao(new Error('getaddrinfo ENOTFOUND host.invalido')), /não existe/);
   assert.match(explicarErroLigacao(new Error('timeout expired')), /tempo limite/);
 });
 

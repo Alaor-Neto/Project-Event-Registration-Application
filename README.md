@@ -103,6 +103,8 @@ docker run -d --name container-registo -p 5003:5000 -v registo-dados:/data --env
 
 Abrir http://localhost:5003 · Organizador: http://localhost:5003/organizador/login
 
+Na primeira construção o Docker compila o `better-sqlite3` (a imagem usa duas fases e as ferramentas de compilação não ficam na imagem final), por isso pode demorar 1–2 minutos.
+
 Comandos úteis: `docker ps`, `docker logs container-registo`, `docker stop container-registo`, `docker start container-registo`.
 
 Sem `DATABASE_URL` no `.env`, os registos ficam no volume `registo-dados` (`/data/registos.db`), por isso persistem mesmo depois de parar ou remover o contentor. Para apagar também os dados: `docker volume rm registo-dados`.
@@ -151,8 +153,8 @@ No Render: *Manual Deploy → Restart service* (ou *Suspend* e *Resume*). Depois
 |-----------------------|-----------------|
 | `ENETUNREACH` / `Network is unreachable` (endereço IPv6) | `DATABASE_URL` é a *Direct connection*. Usar a **Session pooler**. |
 | `password authentication failed` | Password errada ou com `[ ]` / caracteres especiais. *Reset database password* no Supabase (só letras e números) e atualizar o `DATABASE_URL` no Render. |
-| `Tenant or user not found` | No pooler o utilizador é `postgres.<ref-do-projeto>`, não `postgres`. |
-| `ENOTFOUND` | O host do `DATABASE_URL` está errado: copiar de novo em *Connect → Session pooler*. |
+| `Tenant or user not found` ou `(ENOTFOUND) tenant/user postgres.… not found` | O pooler não encontrou o projeto. Não é a password. Quase sempre o **host** não é o do seu projeto (região ou número `aws-0`/`aws-1` errados) ou o utilizador não é `postgres.<ref-do-projeto>`. Copiar de novo o URL completo em *Connect → Session pooler* (não escrever o host à mão) e confirmar que o projeto não está pausado. |
+| `getaddrinfo ENOTFOUND …` | O host do `DATABASE_URL` não existe: copiar de novo em *Connect → Session pooler*. |
 | `Erro de configuração: defina a variável ...` | Falta `ORGANIZER_EMAIL`, `ORGANIZER_PASSWORD` ou `SECRET_KEY` em *Environment*. |
 
 Depois de alterar variáveis no Render, o serviço volta a fazer deploy sozinho; se não, *Manual Deploy → Deploy latest commit*.

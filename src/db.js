@@ -113,8 +113,13 @@ function explicarErroLigacao(erro) {
       '(Project Settings > Database), use uma só com letras e números e cole-a no URL sem [ ].';
   } else if (texto.includes('ENETUNREACH') || texto.includes('Network is unreachable')) {
     dica = 'O Render não alcança este host (IPv6). Use a Session pooler do Supabase, não a ligação direta.';
-  } else if (texto.includes('Tenant or user not found')) {
-    dica = 'Utilizador ou projeto errado: no pooler o utilizador é postgres.<ref-do-projeto>.';
+  } else if (/tenant\/user .* not found|Tenant or user not found/i.test(texto)) {
+    // Mensagem do pooler do Supabase (Supavisor). Quase nunca é a password: é o host ou o utilizador.
+    dica =
+      'O pooler do Supabase não encontrou este projeto. Quase sempre o host do DATABASE_URL não é o do ' +
+      'seu projeto (região ou número aws-0/aws-1 diferentes) ou o utilizador não é postgres.<ref-do-projeto>. ' +
+      'Não componha o host à mão: no Supabase abra Connect > Session pooler, copie o URL completo e ' +
+      'troque só [YOUR-PASSWORD]. Confirme também que o projeto não está pausado.';
   } else if (texto.includes('ENOTFOUND')) {
     dica = 'O host do DATABASE_URL não existe: confirme o URL copiado de Connect > Session pooler.';
   } else if (/timeout|ETIMEDOUT/i.test(texto)) {
